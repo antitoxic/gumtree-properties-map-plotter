@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<!--[if lt IE 7]>
+<html class="no-js lt-ie9 lt-ie8 lt-ie7"> <![endif]-->
+<!--[if IE 7]>
+<html class="no-js lt-ie9 lt-ie8"> <![endif]-->
+<!--[if IE 8]>
+<html class="no-js lt-ie9"> <![endif]-->
+<!--[if gt IE 8]><!-->
+<html class="no-js"> <!--<![endif]-->
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <title></title>
+    <meta name="description" content="">
+    <meta name="viewport" content="width=device-width">
+
+    <!-- Place favicon.ico and apple-touch-icon.png in the root directory -->
+
+    <link rel="stylesheet" href="css/normalize.css">
+    <link rel="stylesheet" href="css/main.css">
+    <style>
+        body {
+            text-align: center;
+        }
+
+        .gmap3 {
+            margin: 20px auto;
+            border: 1px dashed #C0C0C0;
+            width: 100%;
+            height: 700px;
+        }
+        #drop_zone {
+            border: 2px dashed #BBBBBB;
+            border-radius: 5px 5px 5px 5px;
+            color: #BBBBBB;
+            font: 20pt bold,"Vollkorn";
+            padding: 25px;
+            text-align: center;
+        }
+    </style>
+
+    <script src="js/vendor/modernizr-2.6.2.min.js"></script>
+</head>
+<body>
+<div id="drop_zone">Drop gumtree data file here</div>
+<output id="list"></output>
+<div id="test1" class="gmap3"></div>
+<div id="test2"></div>
+
+<script src="js/jquery-1.9.0.min.js"></script>
+<script src="http://maps.googleapis.com/maps/api/js?sensor=false" type="text/javascript"></script>
+<script src="js/gmaps.js"></script>
+<script src="js/plugins.js"></script>
+<script src="js/main.js"></script>
+<script>
+    $(function() {
+        function handleFileSelect(e) {
+            e.stopPropagation();
+            e.preventDefault();
+
+            var files = e.originalEvent.dataTransfer.files; // FileList object.
+
+            // files is a FileList of File objects. List some properties.
+            var output = [];
+            var f = files[0];
+            var reader = new FileReader();
+            var $output = $('#list');
+            // Closure to capture the file information.
+            reader.onload = (function(theFile) {
+                return function(e) {
+                    $output.html('');
+                    plot($.parseJSON(e.target.result));
+                    $output.append($('<strong>').append(theFile.name))
+                    $output.append($('<span>').append('last modified: ' + ( f.lastModifiedDate ? f.lastModifiedDate.toLocaleDateString() : 'n/a')))
+                    $output.append($('<span>').append('(' + (f.type || 'n/a') + ')'))
+                };
+            })(f);
+            reader.readAsText(f);
+        }
+
+        function handleDragOver(e) {
+            e.stopPropagation();
+            e.preventDefault();
+            e.originalEvent.dataTransfer.dropEffect = 'copy'; // Explicitly show this is a copy.
+        }
+
+        // Setup the dnd listeners.
+        var $dropZone = $('#drop_zone');
+        $dropZone.on('dragover', handleDragOver)
+        $dropZone.on('drop', handleFileSelect)
+    })
+
+    function plot(data) {
+        var markersGrouped = {};
+        var markers = [];
+        var $test2 = $('#test2');
+        $.each(data, function (i, ad) {
+            if ($.type(ad.coord)== 'undefined')
+            {
+                return;
+            }
+            var key = ad.coord[0].toString() + ad.coord[1].toString();
+            if ($.type(markersGrouped[key])=='undefined') markersGrouped[key]=[]
+            markersGrouped[key].push(ad)
+        });
+        $.each(markersGrouped, function (k, group) {
+            var info = '<div class="infobox"><hr/>';
+            var lastad;
+            $.each(group, function (i, ad) {
+                lastad = ad;
+                var gallery = '<ul class="gallery">'
+                $.each(ad.photos, function (i, source) {
+                    gallery += '<li><img src="' + source + '" alt=""></li>';
+                })
+                gallery += '</ul>'
+                info += '<p><a href="' + ad.href + '">' + ad.title + '</a>' + '<p>' + ad.price + '</p>'+gallery+'</p>'
+            });
+            info += '</div>'
+            markers.push({
+                lat: lastad.coord[0],
+                lng: lastad.coord[1],
+                infoWindow: {
+                    content: info
+                }
+            })
+        })
+        var map = new GMaps({
+            div: '#test1',
+            lat: 53.7998,
+            lng: -1.5462
+        });
+        map.addMarkers(markers);
+    }
+</script>
+</body>
+</html>
